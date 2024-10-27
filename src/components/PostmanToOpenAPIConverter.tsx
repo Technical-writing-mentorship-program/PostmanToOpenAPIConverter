@@ -53,9 +53,26 @@ type PostmanCollection = {
   item?: PostmanItem[];
 }
 
+type Parameter = {
+  name: string;
+  in: 'query' | 'path' | 'header';
+  schema: {
+    type: string;
+  };
+  example?: string;
+  description?: string;
+  required?: boolean;
+};
+
+type ParsedUrl = {
+  path: string;
+  protocol: string;
+  host: string;
+}
+
 // Helper functions
-const parseUrl = (urlObj: any) => {
-  const defaultResult = { path: '/', protocol: 'https', host: 'postman-echo.com' };
+const parseUrl = (urlObj: any): ParsedUrl => {
+  const defaultResult: ParsedUrl = { path: '/', protocol: 'https', host: 'postman-echo.com' };
   
   try {
     // Handle string URL
@@ -80,21 +97,22 @@ const parseUrl = (urlObj: any) => {
 
     // Handle path array in Postman URL object
     if (urlObj?.path) {
-      const path = '/' + urlObj.path.join('/').replace(/^\/+/, '');
+      const calculatedPath = '/' + urlObj.path.join('/').replace(/^\/+/, '');
       return {
-        path,
-        ...defaultResult
+        path: calculatedPath,
+        protocol: defaultResult.protocol,
+        host: defaultResult.host
       };
     }
 
     return defaultResult;
-  } catch (e) {
+  } catch (_error) {
     return defaultResult;
   }
 };
 
-const processParameters = (request: PostmanRequest) => {
-  const parameters = [];
+const processParameters = (request: PostmanRequest): Parameter[] => {
+  const parameters: Parameter[] = [];
 
   // Process URL query parameters
   if (request?.url?.query) {
@@ -166,7 +184,7 @@ const processRequestBody = (request: PostmanRequest) => {
         type: 'object',
         example: jsonBody
       };
-    } catch (e) {
+    } catch (_error) {
       schema = {
         type: 'string',
         example: request.body.raw
@@ -195,8 +213,10 @@ const processRequestBody = (request: PostmanRequest) => {
   };
 };
 
-const toYAML = (obj: any, indent = 0) => {
-  const stringify = (value: any) => {
+type YAMLValue = string | number | boolean | null | undefined | Record<string, unknown> | YAMLValue[];
+
+const toYAML = (obj: Record<string, unknown>, indent = 0): string => {
+  const stringify = (value: YAMLValue): string => {
     if (value === null || value === undefined) return '';
     if (typeof value === 'string') {
       if (value.match(/[:#\[\]{}",\n|>]/)) {
@@ -219,18 +239,18 @@ const toYAML = (obj: any, indent = 0) => {
       } else {
         yaml += `${spaces}${key}:\n`;
         value.forEach(item => {
-          if (typeof item === 'object') {
-            yaml += `${spaces}  - ${toYAML(item, indent + 4).trimStart()}`;
+          if (typeof item === 'object' && item !== null) {
+            yaml += `${spaces}  - ${toYAML(item as Record<string, unknown>, indent + 4).trimStart()}`;
           } else {
             yaml += `${spaces}  - ${stringify(item)}\n`;
           }
         });
       }
-    } else if (typeof value === 'object') {
+    } else if (typeof value === 'object' && value !== null) {
       if (Object.keys(value).length === 0) {
         yaml += `${spaces}${key}: {}\n`;
       } else {
-        yaml += `${spaces}${key}:\n${toYAML(value, indent + 2)}`;
+        yaml += `${spaces}${key}:\n${toYAML(value as Record<string, unknown>, indent + 2)}`;
       }
     } else if (typeof value === 'string' && value.includes('\n')) {
       yaml += `${spaces}${key}: |\n${value.split('\n').map(line => `${spaces}  ${line}`).join('\n')}\n`;
@@ -325,7 +345,6 @@ const convertToOpenAPI = (collection: PostmanCollection) => {
   return openapi;
 };
 
-// Main component
 const PostmanToOpenAPIConverter = () => {
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
@@ -353,16 +372,20 @@ const PostmanToOpenAPIConverter = () => {
     setCopied(false);
 
     try {
-      const collection = JSON.parse(input);
+      const collection = JSON.parse(input) as PostmanCollection;
       const openapi = convertToOpenAPI(collection);
       
       if (outputFormat === 'yaml') {
-        setOutput(toYAML(openapi));
+        setOutput(toYAML(openapi as Record<string, unknown>));
       } else {
         setOutput(JSON.stringify(openapi, null, 2));
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An error occurred during conversion');
+      }
     }
   };
 
@@ -455,7 +478,7 @@ const PostmanToOpenAPIConverter = () => {
 
       {error && (
         <Alert variant="destructive" className="mt-6">
-          <AlertCircle className="h-4 w-4" />
+          <AlertCircle className="w-4 h-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
