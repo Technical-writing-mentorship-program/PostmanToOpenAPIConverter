@@ -80,10 +80,11 @@ const parseUrl = (urlObj: any) => {
 
     // Handle path array in Postman URL object
     if (urlObj?.path) {
-      const path = '/' + urlObj.path.join('/').replace(/^\/+/, '');
+      const calculatedPath = '/' + urlObj.path.join('/').replace(/^\/+/, '');
       return {
-        path,
-        ...defaultResult
+        path: calculatedPath,
+        protocol: defaultResult.protocol,
+        host: defaultResult.host
       };
     }
 
@@ -455,7 +456,7 @@ const PostmanToOpenAPIConverter = () => {
 
       {error && (
         <Alert variant="destructive" className="mt-6">
-          <AlertCircle className="h-4 w-4" />
+          <AlertCircle className="h-4 h-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
