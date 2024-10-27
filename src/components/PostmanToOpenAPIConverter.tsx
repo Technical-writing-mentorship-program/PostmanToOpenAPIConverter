@@ -53,6 +53,72 @@ type PostmanCollection = {
   item?: PostmanItem[];
 }
 
+// New OpenAPI related interfaces
+interface Operation {
+  tags?: string[];
+  summary: string;
+  description: string;
+  operationId: string;
+  parameters: Parameter[];
+  requestBody?: {
+    required: boolean;
+    content: {
+      [key: string]: {
+        schema: {
+          type: string;
+          example?: unknown;
+          properties?: Record<string, unknown>;
+        };
+      };
+    };
+  };
+  responses: {
+    '200': {
+      description: string;
+    };
+  };
+}
+
+interface PathItem {
+  [method: string]: Operation;
+}
+
+interface Paths {
+  [path: string]: PathItem;
+}
+
+interface OpenAPISpec {
+  [key: string]: unknown; 
+  openapi: string;
+  info: {
+    title: string;
+    description: string;
+    version: string;
+    contact: Record<string, unknown>;
+  };
+  servers: Array<{
+    url: string;
+  }>;
+  paths: Paths;
+  components: {
+    schemas: Record<string, unknown>;
+    securitySchemes: {
+      basicAuth: {
+        type: string;
+        scheme: string;
+      };
+      digestAuth: {
+        type: string;
+        scheme: string;
+      };
+    };
+  };
+  tags: Array<{
+    name: string;
+    description: string;
+  }>;
+}
+
 type Parameter = {
   name: string;
   in: 'query' | 'path' | 'header';
@@ -213,7 +279,9 @@ const processRequestBody = (request: PostmanRequest) => {
   };
 };
 
-type YAMLValue = string | number | boolean | null | undefined | Record<string, unknown> | YAMLValue[];
+
+// Updated YAMLValue type to explicitly include empty object type
+type YAMLValue = string | number | boolean | null | undefined | {} | Record<string, unknown> | YAMLValue[];
 
 const toYAML = (obj: Record<string, unknown>, indent = 0): string => {
   const stringify = (value: YAMLValue): string => {
@@ -223,6 +291,13 @@ const toYAML = (obj: Record<string, unknown>, indent = 0): string => {
         return `"${value.replace(/"/g, '\\"')}"`;
       }
       return value;
+    }
+    if (typeof value === 'object') {
+      if (Object.keys(value).length === 0) {
+        return '{}';
+      }
+      // Handle non-empty objects by converting them to string representation
+      return String(value);
     }
     return String(value);
   };
@@ -262,8 +337,8 @@ const toYAML = (obj: Record<string, unknown>, indent = 0): string => {
   return yaml;
 };
 
-const convertToOpenAPI = (collection: PostmanCollection) => {
-  const openapi = {
+const convertToOpenAPI = (collection: PostmanCollection): OpenAPISpec => {
+  const openapi: OpenAPISpec = {
     openapi: '3.0.3',
     info: {
       title: collection.info?.name || 'Converted API',
@@ -300,10 +375,10 @@ const convertToOpenAPI = (collection: PostmanCollection) => {
         const method = item.request.method?.toLowerCase() || 'get';
 
         if (!openapi.paths[path]) {
-          openapi.paths[path] = {};
+          openapi.paths[path] = {} as PathItem;
         }
 
-        const operation = {
+        const operation: Operation = {
           tags: itemTags.length ? itemTags : undefined,
           summary: item.name || '',
           description: item.request.description || '',
@@ -323,16 +398,19 @@ const convertToOpenAPI = (collection: PostmanCollection) => {
           }
         }
 
-        openapi.paths[path][method] = operation;
+        (openapi.paths[path] as PathItem)[method] = operation;
       }
 
-      if (item.item) {
-        if (!openapi.tags.find(t => t.name === item.name)) {
-          openapi.tags.push({
-            name: item.name || '',
-            description: item.description || ''
-          });
+      if (item.item && item.name !== undefined) {
+        const tag = {
+          name: item.name,
+          description: item.description || ''
+        };
+        
+        if (!openapi.tags.some(t => t.name === item.name)) {
+          openapi.tags.push(tag);
         }
+        
         processItems(item.item, item.name ? [item.name] : []);
       }
     });
@@ -344,6 +422,7 @@ const convertToOpenAPI = (collection: PostmanCollection) => {
 
   return openapi;
 };
+
 
 const PostmanToOpenAPIConverter = () => {
   const [input, setInput] = useState('');
