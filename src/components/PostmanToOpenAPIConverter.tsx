@@ -498,7 +498,7 @@ const PostmanToOpenAPIConverter = () => {
   const [outputFormat, setOutputFormat] = useState<'yaml' | 'json'>('yaml');
   const [copied, setCopied] = useState(false);
 
-  const GITHUB_URL = "https://github.com/Technical-writing-mentorship-program";
+  const GITHUB_URL = "https://github.com/Technical-writing-mentorship-program/PostmanToOpenAPIConverter";
 
   const handleCopy = async () => {
     if (!output) return;
