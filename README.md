@@ -2,7 +2,7 @@
 
 A web-based tool that converts Postman Collections (v2.x) to OpenAPI 3.0 Specifications. Built with Next.js, TypeScript, and Tailwind CSS.
 
-![Postman to OpenAPI Converter](public/converter-preview.png)
+![Postman to OpenAPI Converter](/Display-image.png)
 
 ## Features
 
