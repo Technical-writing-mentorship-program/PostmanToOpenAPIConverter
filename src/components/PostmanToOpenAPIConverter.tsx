@@ -22,6 +22,17 @@ type PostmanFormData = {
   value: string;
 }
 
+// Add response types
+type PostmanResponse = {
+  name: string;
+  originalRequest?: PostmanRequest;
+  status?: string;
+  code?: number;
+  _postman_previewlanguage?: string;
+  header?: PostmanHeader[];
+  body?: string;
+}
+
 type PostmanRequest = {
   url?: {
     raw?: string;
@@ -51,6 +62,19 @@ type PostmanCollection = {
     description?: string;
   };
   item?: PostmanItem[];
+}
+
+// Updated OpenAPI types to include response content
+interface ResponseContent {
+  description: string;
+  content?: {
+    [key: string]: {
+      schema: {
+        type: string;
+        example?: unknown;
+      };
+    };
+  };
 }
 
 // New OpenAPI related interfaces
@@ -337,6 +361,54 @@ const toYAML = (obj: Record<string, unknown>, indent = 0): string => {
   return yaml;
 };
 
+// Add new function to process response examples
+const processResponses = (item: PostmanItem): Record<string, ResponseContent> => {
+  const responses: Record<string, ResponseContent> = {
+    '200': {
+      description: 'Successful response'
+    }
+  };
+
+  if (item.response && item.response.length > 0) {
+    item.response.forEach(response => {
+      const statusCode = response.code?.toString() || '200';
+      let contentType = 'application/json';
+      
+      // Get content type from response headers
+      if (response.header) {
+        const ctHeader = response.header.find(h => h.key.toLowerCase() === 'content-type');
+        if (ctHeader) {
+          contentType = ctHeader.value;
+        }
+      }
+
+      let example: unknown = undefined;
+      if (response.body) {
+        try {
+          example = JSON.parse(response.body);
+        } catch {
+          example = response.body;
+        }
+      }
+
+      responses[statusCode] = {
+        description: response.name || `${statusCode} response`,
+        content: example ? {
+          [contentType]: {
+            schema: {
+              type: typeof example === 'object' ? 'object' : 'string',
+              example
+            }
+          }
+        } : undefined
+      };
+    });
+  }
+
+  return responses;
+};
+
+// Update the convertToOpenAPI function to include response processing
 const convertToOpenAPI = (collection: PostmanCollection): OpenAPISpec => {
   const openapi: OpenAPISpec = {
     openapi: '3.0.3',
@@ -384,11 +456,7 @@ const convertToOpenAPI = (collection: PostmanCollection): OpenAPISpec => {
           description: item.request.description || '',
           operationId: `${method}${path.replace(/\W+/g, '')}`,
           parameters: processParameters(item.request),
-          responses: {
-            '200': {
-              description: 'Successful response'
-            }
-          }
+          responses: processResponses(item)
         };
 
         if (!['get', 'head', 'delete'].includes(method)) {
@@ -422,7 +490,6 @@ const convertToOpenAPI = (collection: PostmanCollection): OpenAPISpec => {
 
   return openapi;
 };
-
 
 const PostmanToOpenAPIConverter = () => {
   const [input, setInput] = useState('');
