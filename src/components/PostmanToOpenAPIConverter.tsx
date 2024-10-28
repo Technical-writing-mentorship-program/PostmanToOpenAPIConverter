@@ -53,6 +53,7 @@ type PostmanItem = {
   name?: string;
   description?: string;
   request?: PostmanRequest;
+  response?: PostmanResponse[]; 
   item?: PostmanItem[];
 }
 
@@ -96,12 +97,10 @@ interface Operation {
       };
     };
   };
-  responses: {
-    '200': {
-      description: string;
-    };
-  };
+  responses: Record<string, ResponseContent>; // Changed from strict '200' requirement
 }
+
+
 
 interface PathItem {
   [method: string]: Operation;
@@ -361,11 +360,19 @@ const toYAML = (obj: Record<string, unknown>, indent = 0): string => {
   return yaml;
 };
 
-// Add new function to process response examples
+// Update the processResponses function to always include a 200 response
 const processResponses = (item: PostmanItem): Record<string, ResponseContent> => {
   const responses: Record<string, ResponseContent> = {
     '200': {
-      description: 'Successful response'
+      description: 'Successful response',
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            example: {}
+          }
+        }
+      }
     }
   };
 
