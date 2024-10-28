@@ -1,0 +1,138 @@
+openapi: 3.0.3
+info:
+  title: Simple Users API
+  description: A basic API collection for managing users
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: "https://postman-echo.com"
+paths:
+  /:
+    get:
+      summary: Get User by ID
+      description: 
+      operationId: get
+      parameters: []
+      responses:
+        200:
+          description: Success Response
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: success
+                  data:
+                    id: 1
+                    name: John Doe
+                    email: john@example.com
+                    age: 30
+                    createdAt: "2024-01-01T00:00:00Z"
+        404:
+          description: User Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: error
+                  message: User not found
+    post:
+      summary: Create User
+      description: Create a new user with the provided information.
+      operationId: post
+      parameters: []
+      responses:
+        200:
+          description: Successful response
+        201:
+          description: Success Response
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: success
+                  data:
+                    id: 1
+                    name: John Doe
+                    email: john@example.com
+                    age: 30
+                    createdAt: "2024-01-01T00:00:00Z"
+        400:
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: error
+                  errors:
+                    name: Name is required
+                    email: Invalid email format
+                    age: Age must be a positive number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                name: John Doe
+                email: john@example.com
+                age: 30
+    put:
+      summary: Update User
+      description: Update an existing user's information.
+      operationId: put
+      parameters: []
+      responses:
+        200:
+          description: Success Response
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: success
+                  data:
+                    id: 1
+                    name: John Doe Updated
+                    email: john.updated@example.com
+                    age: 31
+                    updatedAt: "2024-01-02T00:00:00Z"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                name: John Doe Updated
+                email: john.updated@example.com
+                age: 31
+    delete:
+      summary: Delete User
+      description: 
+      operationId: delete
+      parameters: []
+      responses:
+        200:
+          description: Success Response
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: success
+                  message: User successfully deleted
+components:
+  schemas: {}
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    digestAuth:
+      type: http
+      scheme: digest
+tags: []
