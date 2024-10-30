@@ -39,7 +39,7 @@ Wanna try it out? Follow the steps below:
 1. Clone the repository:
 
     ```bash
-    git clone https://github.com/Technical-writing-mentorship-program/postman-openapi-converter.git
+    git clone https://github.com/Technical-writing-mentorship-program/PostmanToOpenAPIConverter.git
     cd postman-openapi-converter
     ```
 
